@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/property.dart';
 import '../services/database_service.dart';
 import 'add_property_screen.dart';
+import 'property_details_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   @override
@@ -44,6 +45,13 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  void _openPropertyDetails(Property property) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => PropertyDetailsScreen(property: property)),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -61,9 +69,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     return ListTile(
                       title: Text(property.name),
                       subtitle: Text('Total: \$${property.totalAmount.toStringAsFixed(2)}'),
-                      onTap: () {
-                        // Navigate to property details screen
-                      },
+                      onTap: () => _openPropertyDetails(property),
                     );
                   },
                 ),
