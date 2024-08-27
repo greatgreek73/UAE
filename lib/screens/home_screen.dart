@@ -41,15 +41,18 @@ class _HomeScreenState extends State<HomeScreen> {
       MaterialPageRoute(builder: (context) => AddPropertyScreen()),
     );
     if (result == true) {
-      _loadProperties(); // Reload the list if a new property was added
+      _loadProperties();
     }
   }
 
-  void _openPropertyDetails(Property property) {
-    Navigator.push(
+  void _openPropertyDetails(Property property) async {
+    final result = await Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => PropertyDetailsScreen(property: property)),
     );
+    if (result == true) {
+      _loadProperties();
+    }
   }
 
   @override
