@@ -11,7 +11,6 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   List<Property> properties = [];
-  bool isLoading = true;
 
   @override
   void initState() {
@@ -20,19 +19,10 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _loadProperties() async {
-    try {
-      final loadedProperties = await DatabaseService.instance.getAllProperties();
-      setState(() {
-        properties = loadedProperties;
-        isLoading = false;
-      });
-      print('Loaded ${properties.length} properties');
-    } catch (e) {
-      print('Error loading properties: $e');
-      setState(() {
-        isLoading = false;
-      });
-    }
+    final loadedProperties = await DatabaseService.instance.getAllProperties();
+    setState(() {
+      properties = loadedProperties;
+    });
   }
 
   void _addNewProperty() async {
@@ -61,21 +51,19 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: Text('Property Payment Tracker'),
       ),
-      body: isLoading
-          ? Center(child: CircularProgressIndicator())
-          : properties.isEmpty
-              ? Center(child: Text('No properties found. Add some!'))
-              : ListView.builder(
-                  itemCount: properties.length,
-                  itemBuilder: (context, index) {
-                    final property = properties[index];
-                    return ListTile(
-                      title: Text(property.name),
-                      subtitle: Text('Total: \$${property.totalAmount.toStringAsFixed(2)}'),
-                      onTap: () => _openPropertyDetails(property),
-                    );
-                  },
-                ),
+      body: properties.isEmpty
+          ? Center(child: Text('No properties found. Add some!'))
+          : ListView.builder(
+              itemCount: properties.length,
+              itemBuilder: (context, index) {
+                final property = properties[index];
+                return ListTile(
+                  title: Text(property.name),
+                  subtitle: Text('Total: \$${property.totalAmount.toStringAsFixed(2)}'),
+                  onTap: () => _openPropertyDetails(property),
+                );
+              },
+            ),
       floatingActionButton: FloatingActionButton(
         child: Icon(Icons.add),
         onPressed: _addNewProperty,

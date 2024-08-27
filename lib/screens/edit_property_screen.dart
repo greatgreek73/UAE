@@ -57,7 +57,7 @@ class _EditPropertyScreenState extends State<EditPropertyScreen> {
         endDate: _endDate,
       );
       await DatabaseService.instance.updateProperty(updatedProperty);
-      Navigator.pop(context, true);
+      Navigator.pop(context, updatedProperty);
     }
   }
 

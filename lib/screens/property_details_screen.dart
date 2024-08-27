@@ -23,20 +23,17 @@ class _PropertyDetailsScreenState extends State<PropertyDetailsScreen> {
   }
 
   Future<void> _editProperty() async {
-    final result = await Navigator.push(
+    final updatedProperty = await Navigator.push<Property>(
       context,
       MaterialPageRoute(
         builder: (context) => EditPropertyScreen(property: _property),
       ),
     );
-    if (result == true) {
-      // Reload the property details
-      final updatedProperty = await DatabaseService.instance.getProperty(_property.id!);
-      if (updatedProperty != null) {
-        setState(() {
-          _property = updatedProperty;
-        });
-      }
+    if (updatedProperty != null) {
+      setState(() {
+        _property = updatedProperty;
+      });
+      Navigator.pop(context, true);  // Сигнализируем HomeScreen об изменениях
     }
   }
 
@@ -61,7 +58,7 @@ class _PropertyDetailsScreenState extends State<PropertyDetailsScreen> {
 
     if (confirm == true) {
       await DatabaseService.instance.deleteProperty(_property.id!);
-      Navigator.of(context).pop(true); // Return to home screen
+      Navigator.of(context).pop(true);  // Сигнализируем HomeScreen об изменениях
     }
   }
 
