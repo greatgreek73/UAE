@@ -1,39 +1,44 @@
 import 'package:flutter/material.dart';
+import 'package:hive/hive.dart';
 import '../models/property.dart';
-import '../services/database_service.dart';
 import 'package:intl/intl.dart';
 import 'edit_property_screen.dart';
 
 class PropertyDetailsScreen extends StatefulWidget {
+  final int propertyKey;
   final Property property;
 
-  PropertyDetailsScreen({required this.property});
+  PropertyDetailsScreen({required this.propertyKey, required this.property});
 
   @override
-  _PropertyDetailsScreenState createState() => _PropertyDetailsScreenState();
+  PropertyDetailsScreenState createState() => PropertyDetailsScreenState();
 }
 
-class _PropertyDetailsScreenState extends State<PropertyDetailsScreen> {
+class PropertyDetailsScreenState extends State<PropertyDetailsScreen> {
   late Property _property;
+  late int _propertyKey;
+  late Box<Property> box;
 
   @override
   void initState() {
     super.initState();
     _property = widget.property;
+    _propertyKey = widget.propertyKey;
+    box = Hive.box<Property>('properties');
   }
 
   Future<void> _editProperty() async {
     final updatedProperty = await Navigator.push<Property>(
       context,
       MaterialPageRoute(
-        builder: (context) => EditPropertyScreen(property: _property),
+        builder: (context) => EditPropertyScreen(propertyKey: _propertyKey, property: _property),
       ),
     );
     if (updatedProperty != null) {
       setState(() {
         _property = updatedProperty;
       });
-      Navigator.pop(context, true);  // Сигнализируем HomeScreen об изменениях
+      Navigator.pop(context, true); // Обновление списка на HomeScreen
     }
   }
 
@@ -57,8 +62,8 @@ class _PropertyDetailsScreenState extends State<PropertyDetailsScreen> {
     );
 
     if (confirm == true) {
-      await DatabaseService.instance.deleteProperty(_property.id!);
-      Navigator.of(context).pop(true);  // Сигнализируем HomeScreen об изменениях
+      await box.delete(_propertyKey);
+      Navigator.of(context).pop(true);
     }
   }
 
@@ -86,6 +91,14 @@ class _PropertyDetailsScreenState extends State<PropertyDetailsScreen> {
             Text('Name: ${_property.name}', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             SizedBox(height: 8),
             Text('Total Amount: \$${_property.totalAmount.toStringAsFixed(2)}', style: TextStyle(fontSize: 16)),
+            SizedBox(height: 8),
+            Text('Paid Amount: \$${_property.paidAmount.toStringAsFixed(2)}', style: TextStyle(fontSize: 16)),
+            SizedBox(height: 8),
+            Text('Area: ${_property.area.toStringAsFixed(2)} m²', style: TextStyle(fontSize: 16)),
+            SizedBox(height: 8),
+            Text('Country: ${_property.country}', style: TextStyle(fontSize: 16)),
+            SizedBox(height: 8),
+            Text('Location: ${_property.location}', style: TextStyle(fontSize: 16)),
             SizedBox(height: 8),
             Text('Start Date: ${DateFormat('yyyy-MM-dd').format(_property.startDate)}', style: TextStyle(fontSize: 16)),
             SizedBox(height: 8),

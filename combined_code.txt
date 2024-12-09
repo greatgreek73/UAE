@@ -1,0 +1,946 @@
+
+# --- ?????? ????? C:\UAE\lib\models\property.dart ---
+
+class Property {
+  final int? id;
+  final String name;
+  final double totalAmount;
+  final DateTime startDate;
+  final DateTime endDate;
+  final double paidAmount;
+  final double area;
+  final String country;
+  final String location;
+
+  Property({
+    this.id,
+    required this.name,
+    required this.totalAmount,
+    required this.startDate,
+    required this.endDate,
+    required this.paidAmount,
+    required this.area,
+    required this.country,
+    required this.location,
+  });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'name': name,
+      'totalAmount': totalAmount,
+      'startDate': startDate.toIso8601String(),
+      'endDate': endDate.toIso8601String(),
+      'paidAmount': paidAmount,
+      'area': area,
+      'country': country,
+      'location': location,
+    };
+  }
+
+  factory Property.fromMap(Map<String, dynamic> map) {
+    return Property(
+      id: map['id'],
+      name: map['name'] ?? '',
+      totalAmount: map['totalAmount']?.toDouble() ?? 0.0,
+      startDate: DateTime.parse(map['startDate'] ?? DateTime.now().toIso8601String()),
+      endDate: DateTime.parse(map['endDate'] ?? DateTime.now().toIso8601String()),
+      paidAmount: map['paidAmount']?.toDouble() ?? 0.0,
+      area: map['area']?.toDouble() ?? 0.0,
+      country: map['country'] ?? '',
+      location: map['location'] ?? '',
+    );
+  }
+}
+
+# --- ????? ????? C:\UAE\lib\models\property.dart ---
+
+
+# --- ?????? ????? C:\UAE\lib\screens\add_property_screen.dart ---
+
+import 'package:flutter/material.dart';
+import '../models/property.dart';
+import '../services/database_service.dart';
+
+class AddPropertyScreen extends StatefulWidget {
+  @override
+  _AddPropertyScreenState createState() => _AddPropertyScreenState();
+}
+
+class _AddPropertyScreenState extends State<AddPropertyScreen> {
+  final _formKey = GlobalKey<FormState>();
+  String _name = '';
+  double _totalAmount = 0;
+  double _paidAmount = 0;
+  double _area = 0;
+  String _country = '';
+  String _location = '';
+  DateTime _startDate = DateTime.now();
+  DateTime _endDate = DateTime.now().add(Duration(days: 365));
+
+  void _submitForm() async {
+    if (_formKey.currentState!.validate()) {
+      _formKey.currentState!.save();
+      final property = Property(
+        name: _name,
+        totalAmount: _totalAmount,
+        startDate: _startDate,
+        endDate: _endDate,
+        paidAmount: _paidAmount,
+        area: _area,
+        country: _country,
+        location: _location,
+      );
+      await DatabaseService.instance.createProperty(property);
+      Navigator.pop(context, true); // Return true to indicate a new property was added
+    }
+  }
+
+  Future<void> _selectDate(BuildContext context, bool isStartDate) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: isStartDate ? _startDate : _endDate,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2101),
+    );
+    if (picked != null) {
+      setState(() {
+        if (isStartDate) {
+          _startDate = picked;
+        } else {
+          _endDate = picked;
+        }
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text('Add New Property')),
+      body: Form(
+        key: _formKey,
+        child: ListView(
+          padding: EdgeInsets.all(16),
+          children: [
+            TextFormField(
+              decoration: InputDecoration(labelText: 'Property Name'),
+              validator: (value) => value!.isEmpty ? 'Please enter a name' : null,
+              onSaved: (value) => _name = value!,
+            ),
+            TextFormField(
+              decoration: InputDecoration(labelText: 'Total Amount'),
+              keyboardType: TextInputType.number,
+              validator: (value) => value!.isEmpty ? 'Please enter a total amount' : null,
+              onSaved: (value) => _totalAmount = double.parse(value!),
+            ),
+            TextFormField(
+              decoration: InputDecoration(labelText: 'Paid Amount'),
+              keyboardType: TextInputType.number,
+              validator: (value) => value!.isEmpty ? 'Please enter a paid amount' : null,
+              onSaved: (value) => _paidAmount = double.parse(value!),
+            ),
+            TextFormField(
+              decoration: InputDecoration(labelText: 'Area (m²)'),
+              keyboardType: TextInputType.number,
+              validator: (value) => value!.isEmpty ? 'Please enter an area' : null,
+              onSaved: (value) => _area = double.parse(value!),
+            ),
+            TextFormField(
+              decoration: InputDecoration(labelText: 'Country'),
+              validator: (value) => value!.isEmpty ? 'Please enter a country' : null,
+              onSaved: (value) => _country = value!,
+            ),
+            TextFormField(
+              decoration: InputDecoration(labelText: 'Location'),
+              validator: (value) => value!.isEmpty ? 'Please enter a location' : null,
+              onSaved: (value) => _location = value!,
+            ),
+            ListTile(
+              title: Text('Start Date: ${_startDate.toLocal().toString().split(' ')[0]}'),
+              trailing: Icon(Icons.calendar_today),
+              onTap: () => _selectDate(context, true),
+            ),
+            ListTile(
+              title: Text('End Date: ${_endDate.toLocal().toString().split(' ')[0]}'),
+              trailing: Icon(Icons.calendar_today),
+              onTap: () => _selectDate(context, false),
+            ),
+            SizedBox(height: 20),
+            ElevatedButton(
+              child: Text('Add Property'),
+              onPressed: _submitForm,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+# --- ????? ????? C:\UAE\lib\screens\add_property_screen.dart ---
+
+
+# --- ?????? ????? C:\UAE\lib\screens\edit_property_screen.dart ---
+
+import 'package:flutter/material.dart';
+import '../models/property.dart';
+import '../services/database_service.dart';
+import 'package:intl/intl.dart';
+
+class EditPropertyScreen extends StatefulWidget {
+  final Property property;
+
+  EditPropertyScreen({required this.property});
+
+  @override
+  _EditPropertyScreenState createState() => _EditPropertyScreenState();
+}
+
+class _EditPropertyScreenState extends State<EditPropertyScreen> {
+  final _formKey = GlobalKey<FormState>();
+  late String _name;
+  late double _totalAmount;
+  late double _paidAmount;
+  late double _area;
+  late String _country;
+  late String _location;
+  late DateTime _startDate;
+  late DateTime _endDate;
+
+  @override
+  void initState() {
+    super.initState();
+    _name = widget.property.name;
+    _totalAmount = widget.property.totalAmount;
+    _paidAmount = widget.property.paidAmount;
+    _area = widget.property.area;
+    _country = widget.property.country;
+    _location = widget.property.location;
+    _startDate = widget.property.startDate;
+    _endDate = widget.property.endDate;
+  }
+
+  Future<void> _selectDate(BuildContext context, bool isStartDate) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: isStartDate ? _startDate : _endDate,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2101),
+    );
+    if (picked != null) {
+      setState(() {
+        if (isStartDate) {
+          _startDate = picked;
+        } else {
+          _endDate = picked;
+        }
+      });
+    }
+  }
+
+  void _submitForm() async {
+    if (_formKey.currentState!.validate()) {
+      _formKey.currentState!.save();
+      final updatedProperty = Property(
+        id: widget.property.id,
+        name: _name,
+        totalAmount: _totalAmount,
+        paidAmount: _paidAmount,
+        area: _area,
+        country: _country,
+        location: _location,
+        startDate: _startDate,
+        endDate: _endDate,
+      );
+      await DatabaseService.instance.updateProperty(updatedProperty);
+      Navigator.pop(context, updatedProperty);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text('Edit Property')),
+      body: Form(
+        key: _formKey,
+        child: ListView(
+          padding: EdgeInsets.all(16),
+          children: [
+            TextFormField(
+              initialValue: _name,
+              decoration: InputDecoration(labelText: 'Property Name'),
+              validator: (value) => value!.isEmpty ? 'Please enter a name' : null,
+              onSaved: (value) => _name = value!,
+            ),
+            TextFormField(
+              initialValue: _totalAmount.toString(),
+              decoration: InputDecoration(labelText: 'Total Amount'),
+              keyboardType: TextInputType.number,
+              validator: (value) => value!.isEmpty ? 'Please enter a total amount' : null,
+              onSaved: (value) => _totalAmount = double.parse(value!),
+            ),
+            TextFormField(
+              initialValue: _paidAmount.toString(),
+              decoration: InputDecoration(labelText: 'Paid Amount'),
+              keyboardType: TextInputType.number,
+              validator: (value) => value!.isEmpty ? 'Please enter a paid amount' : null,
+              onSaved: (value) => _paidAmount = double.parse(value!),
+            ),
+            TextFormField(
+              initialValue: _area.toString(),
+              decoration: InputDecoration(labelText: 'Area (m²)'),
+              keyboardType: TextInputType.number,
+              validator: (value) => value!.isEmpty ? 'Please enter an area' : null,
+              onSaved: (value) => _area = double.parse(value!),
+            ),
+            TextFormField(
+              initialValue: _country,
+              decoration: InputDecoration(labelText: 'Country'),
+              validator: (value) => value!.isEmpty ? 'Please enter a country' : null,
+              onSaved: (value) => _country = value!,
+            ),
+            TextFormField(
+              initialValue: _location,
+              decoration: InputDecoration(labelText: 'Location'),
+              validator: (value) => value!.isEmpty ? 'Please enter a location' : null,
+              onSaved: (value) => _location = value!,
+            ),
+            ListTile(
+              title: Text('Start Date'),
+              subtitle: Text(DateFormat('yyyy-MM-dd').format(_startDate)),
+              onTap: () => _selectDate(context, true),
+            ),
+            ListTile(
+              title: Text('End Date'),
+              subtitle: Text(DateFormat('yyyy-MM-dd').format(_endDate)),
+              onTap: () => _selectDate(context, false),
+            ),
+            SizedBox(height: 20),
+            ElevatedButton(
+              child: Text('Update Property'),
+              onPressed: _submitForm,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+# --- ????? ????? C:\UAE\lib\screens\edit_property_screen.dart ---
+
+
+# --- ?????? ????? C:\UAE\lib\screens\home_screen.dart ---
+
+import 'package:flutter/material.dart';
+import '../models/property.dart';
+import '../services/database_service.dart';
+import 'add_property_screen.dart';
+import 'property_details_screen.dart';
+import 'package:intl/intl.dart';
+
+class HomeScreen extends StatefulWidget {
+  const HomeScreen({Key? key}) : super(key: key);
+
+  @override
+  _HomeScreenState createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  List<Property> properties = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProperties();
+  }
+
+  Future<void> _loadProperties() async {
+    try {
+      final loadedProperties = await DatabaseService.instance.getAllProperties();
+      print('Loaded properties: ${loadedProperties.length}'); // Debug print
+      for (var property in loadedProperties) {
+        print('Property: ${property.name}, Total: ${property.totalAmount}'); // Debug print
+      }
+      setState(() {
+        properties = loadedProperties;
+      });
+    } catch (e) {
+      print('Error loading properties: $e'); // Debug print
+    }
+  }
+
+  void _addNewProperty() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => AddPropertyScreen()),
+    );
+    if (result == true) {
+      _loadProperties();
+    }
+  }
+
+  void _openPropertyDetails(Property property) async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => PropertyDetailsScreen(property: property)),
+    );
+    if (result == true) {
+      _loadProperties();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    print('Building HomeScreen. Properties count: ${properties.length}'); // Debug print
+    return Scaffold(
+      body: SafeArea(
+        child: Column(
+          children: [
+            Expanded(
+              flex: 1,
+              child: InvestmentSummaryWidget(
+                totalValue: _calculateTotalValue(),
+                paidAmount: _calculatePaidAmount(),
+                remainingAmount: _calculateRemainingAmount(),
+                totalArea: _calculateTotalArea(),
+                locationSummary: _createLocationSummary(),
+              ),
+            ),
+            Expanded(
+              flex: 2,
+              child: properties.isEmpty
+                  ? const Center(child: Text('No properties found. Add some!'))
+                  : ListView.builder(
+                      itemCount: properties.length,
+                      itemBuilder: (context, index) {
+                        final property = properties[index];
+                        return PropertyCard(
+                          property: property,
+                          onTap: () => _openPropertyDetails(property),
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        child: const Icon(Icons.add),
+        onPressed: _addNewProperty,
+      ),
+    );
+  }
+
+  double _calculateTotalValue() {
+    return properties.fold(0, (sum, property) => sum + property.totalAmount);
+  }
+
+  double _calculatePaidAmount() {
+    return properties.fold(0, (sum, property) => sum + property.paidAmount);
+  }
+
+  double _calculateRemainingAmount() {
+    return _calculateTotalValue() - _calculatePaidAmount();
+  }
+
+  double _calculateTotalArea() {
+    return properties.fold(0, (sum, property) => sum + property.area);
+  }
+
+  Map<String, Map<String, int>> _createLocationSummary() {
+    Map<String, Map<String, int>> summary = {};
+    for (var property in properties) {
+      summary.putIfAbsent(property.country, () => {});
+      summary[property.country]![property.location] = 
+          (summary[property.country]![property.location] ?? 0) + 1;
+    }
+    return summary;
+  }
+}
+
+class InvestmentSummaryWidget extends StatelessWidget {
+  final double totalValue;
+  final double paidAmount;
+  final double remainingAmount;
+  final double totalArea;
+  final Map<String, Map<String, int>> locationSummary;
+
+  const InvestmentSummaryWidget({
+    Key? key,
+    required this.totalValue,
+    required this.paidAmount,
+    required this.remainingAmount,
+    required this.totalArea,
+    required this.locationSummary,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.grey[850],
+        borderRadius: BorderRadius.circular(15),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Investment Summary',
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+          const SizedBox(height: 16),
+          _buildSummaryRow('Total Value', '\$${totalValue.toStringAsFixed(2)}'),
+          _buildSummaryRow('Paid Amount', '\$${paidAmount.toStringAsFixed(2)}'),
+          _buildSummaryRow('Remaining Amount', '\$${remainingAmount.toStringAsFixed(2)}'),
+          _buildSummaryRow('Total Area', '${totalArea.toStringAsFixed(2)} m²'),
+          const SizedBox(height: 16),
+          Text(
+            'Location Summary',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 8),
+          ...locationSummary.entries.map((entry) => _buildLocationSummary(entry.key, entry.value)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSummaryRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLocationSummary(String country, Map<String, int> locations) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 8, top: 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(country, style: const TextStyle(fontWeight: FontWeight.bold)),
+          ...locations.entries.map((location) => Padding(
+                padding: const EdgeInsets.only(left: 16),
+                child: Text('${location.key}: ${location.value}'),
+              )),
+        ],
+      ),
+    );
+  }
+}
+
+class PropertyCard extends StatelessWidget {
+  final Property property;
+  final VoidCallback onTap;
+
+  const PropertyCard({
+    Key? key,
+    required this.property,
+    required this.onTap,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                property.name,
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Total: \$${property.totalAmount.toStringAsFixed(2)}',
+                style: const TextStyle(fontSize: 16, color: Colors.green),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Paid: \$${property.paidAmount.toStringAsFixed(2)}',
+                style: const TextStyle(fontSize: 14, color: Colors.blue),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Area: ${property.area.toStringAsFixed(2)} m²',
+                style: const TextStyle(fontSize: 14),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Location: ${property.location}, ${property.country}',
+                style: const TextStyle(fontSize: 14),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Start: ${_formatDate(property.startDate)}',
+                    style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                  ),
+                  Text(
+                    'End: ${_formatDate(property.endDate)}',
+                    style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _formatDate(DateTime date) {
+    return DateFormat('yyyy-MM-dd').format(date);
+  }
+}
+
+# --- ????? ????? C:\UAE\lib\screens\home_screen.dart ---
+
+
+# --- ?????? ????? C:\UAE\lib\screens\property_details_screen.dart ---
+
+import 'package:flutter/material.dart';
+import '../models/property.dart';
+import '../services/database_service.dart';
+import 'package:intl/intl.dart';
+import 'edit_property_screen.dart';
+
+class PropertyDetailsScreen extends StatefulWidget {
+  final Property property;
+
+  PropertyDetailsScreen({required this.property});
+
+  @override
+  _PropertyDetailsScreenState createState() => _PropertyDetailsScreenState();
+}
+
+class _PropertyDetailsScreenState extends State<PropertyDetailsScreen> {
+  late Property _property;
+
+  @override
+  void initState() {
+    super.initState();
+    _property = widget.property;
+  }
+
+  Future<void> _editProperty() async {
+    final updatedProperty = await Navigator.push<Property>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => EditPropertyScreen(property: _property),
+      ),
+    );
+    if (updatedProperty != null) {
+      setState(() {
+        _property = updatedProperty;
+      });
+      Navigator.pop(context, true);  // Сигнализируем HomeScreen об изменениях
+    }
+  }
+
+  Future<void> _deleteProperty() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Delete Property'),
+        content: Text('Are you sure you want to delete this property?'),
+        actions: [
+          TextButton(
+            child: Text('Cancel'),
+            onPressed: () => Navigator.of(context).pop(false),
+          ),
+          TextButton(
+            child: Text('Delete'),
+            onPressed: () => Navigator.of(context).pop(true),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      await DatabaseService.instance.deleteProperty(_property.id!);
+      Navigator.of(context).pop(true);  // Сигнализируем HomeScreen об изменениях
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(_property.name),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.edit),
+            onPressed: _editProperty,
+          ),
+          IconButton(
+            icon: Icon(Icons.delete),
+            onPressed: _deleteProperty,
+          ),
+        ],
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Name: ${_property.name}', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            SizedBox(height: 8),
+            Text('Total Amount: \$${_property.totalAmount.toStringAsFixed(2)}', style: TextStyle(fontSize: 16)),
+            SizedBox(height: 8),
+            Text('Start Date: ${DateFormat('yyyy-MM-dd').format(_property.startDate)}', style: TextStyle(fontSize: 16)),
+            SizedBox(height: 8),
+            Text('End Date: ${DateFormat('yyyy-MM-dd').format(_property.endDate)}', style: TextStyle(fontSize: 16)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+# --- ????? ????? C:\UAE\lib\screens\property_details_screen.dart ---
+
+
+# --- ?????? ????? C:\UAE\lib\services\database_service.dart ---
+
+import 'package:sqflite/sqflite.dart';
+import 'package:path/path.dart';
+import '../models/property.dart';
+
+class DatabaseService {
+  static final DatabaseService instance = DatabaseService._init();
+  static Database? _database;
+
+  DatabaseService._init();
+
+  Future<Database> get database async {
+    if (_database != null) return _database!;
+    _database = await _initDB('properties.db');
+    return _database!;
+  }
+
+  Future<Database> _initDB(String filePath) async {
+    final dbPath = await getDatabasesPath();
+    final path = join(dbPath, filePath);
+    print('Initializing database at $path');
+    return await openDatabase(
+      path, 
+      version: 2, 
+      onCreate: _createDB, 
+      onUpgrade: _upgradeDB,
+      onOpen: (db) {
+        print('Database opened successfully');
+      },
+    );
+  }
+
+  Future<void> _createDB(Database db, int version) async {
+    print('Creating database tables');
+    try {
+      await db.execute('''
+      CREATE TABLE properties(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT,
+        totalAmount REAL,
+        startDate TEXT,
+        endDate TEXT,
+        paidAmount REAL,
+        area REAL,
+        country TEXT,
+        location TEXT
+      )
+      ''');
+      print('Database tables created successfully');
+    } catch (e) {
+      print('Error creating database tables: $e');
+    }
+  }
+
+  Future<void> _upgradeDB(Database db, int oldVersion, int newVersion) async {
+    print('Upgrading database from version $oldVersion to $newVersion');
+    if (oldVersion < 2) {
+      try {
+        await db.execute('ALTER TABLE properties ADD COLUMN paidAmount REAL DEFAULT 0.0');
+        await db.execute('ALTER TABLE properties ADD COLUMN area REAL DEFAULT 0.0');
+        await db.execute('ALTER TABLE properties ADD COLUMN country TEXT DEFAULT ""');
+        await db.execute('ALTER TABLE properties ADD COLUMN location TEXT DEFAULT ""');
+        print('Database upgraded successfully');
+      } catch (e) {
+        print('Error upgrading database: $e');
+      }
+    }
+  }
+
+  Future<int> createProperty(Property property) async {
+    try {
+      final db = await instance.database;
+      final id = await db.insert('properties', property.toMap());
+      print('Created property with id: $id');
+      return id;
+    } catch (e) {
+      print('Error creating property: $e');
+      return -1;
+    }
+  }
+
+  Future<List<Property>> getAllProperties() async {
+    try {
+      final db = await instance.database;
+      final result = await db.query('properties');
+      print('Retrieved ${result.length} properties from database');
+      print('Raw data from database: $result');
+      
+      List<Property> properties = [];
+      for (var row in result) {
+        try {
+          properties.add(Property.fromMap(row));
+        } catch (e) {
+          print('Error converting property: $e');
+          // Пропускаем проблемную запись и продолжаем с следующей
+        }
+      }
+      
+      print('Successfully converted ${properties.length} properties');
+      return properties;
+    } catch (e) {
+      print('Error getting all properties: $e');
+      return [];
+    }
+  }
+
+  Future<Property?> getProperty(int id) async {
+    try {
+      final db = await instance.database;
+      final maps = await db.query(
+        'properties',
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+
+      if (maps.isNotEmpty) {
+        print('Retrieved property with id: $id');
+        return Property.fromMap(maps.first);
+      } else {
+        print('No property found with id: $id');
+        return null;
+      }
+    } catch (e) {
+      print('Error getting property: $e');
+      return null;
+    }
+  }
+
+  Future<int> updateProperty(Property property) async {
+    try {
+      final db = await instance.database;
+      final result = await db.update(
+        'properties',
+        property.toMap(),
+        where: 'id = ?',
+        whereArgs: [property.id],
+      );
+      print('Updated property with id: ${property.id}. Rows affected: $result');
+      return result;
+    } catch (e) {
+      print('Error updating property: $e');
+      return -1;
+    }
+  }
+
+  Future<int> deleteProperty(int id) async {
+    try {
+      final db = await instance.database;
+      final result = await db.delete(
+        'properties',
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+      print('Deleted property with id: $id. Rows affected: $result');
+      return result;
+    } catch (e) {
+      print('Error deleting property: $e');
+      return -1;
+    }
+  }
+
+  Future<void> closeDatabase() async {
+    try {
+      final db = await instance.database;
+      await db.close();
+      _database = null;
+      print('Database closed successfully');
+    } catch (e) {
+      print('Error closing database: $e');
+    }
+  }
+}
+
+# --- ????? ????? C:\UAE\lib\services\database_service.dart ---
+
+
+# --- ?????? ????? C:\UAE\lib\main.dart ---
+
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'screens/home_screen.dart';
+
+void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+  SystemChrome.setSystemUIOverlayStyle(
+    SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      systemNavigationBarColor: Colors.transparent,
+      systemNavigationBarDividerColor: Colors.transparent,
+    ),
+  );
+  runApp(const MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  const MyApp({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Property Investment Tracker',
+      theme: ThemeData.dark().copyWith(
+        scaffoldBackgroundColor: Colors.black,
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Colors.black,
+          elevation: 0,
+          systemOverlayStyle: SystemUiOverlayStyle.light,
+        ),
+        cardTheme: CardTheme(
+          color: Colors.grey[900],
+          elevation: 5,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15),
+          ),
+        ),
+        floatingActionButtonTheme: const FloatingActionButtonThemeData(
+          backgroundColor: Colors.blue,
+        ),
+      ),
+      home: HomeScreen(),
+    );
+  }
+}
+
+# --- ????? ????? C:\UAE\lib\main.dart ---
+

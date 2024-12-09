@@ -1,18 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:hive/hive.dart';
 import '../models/property.dart';
-import '../services/database_service.dart';
 import 'package:intl/intl.dart';
 
 class EditPropertyScreen extends StatefulWidget {
+  final int propertyKey; 
   final Property property;
 
-  EditPropertyScreen({required this.property});
+  EditPropertyScreen({required this.propertyKey, required this.property});
 
   @override
-  _EditPropertyScreenState createState() => _EditPropertyScreenState();
+  EditPropertyScreenState createState() => EditPropertyScreenState();
 }
 
-class _EditPropertyScreenState extends State<EditPropertyScreen> {
+class EditPropertyScreenState extends State<EditPropertyScreen> {
   final _formKey = GlobalKey<FormState>();
   late String _name;
   late double _totalAmount;
@@ -37,7 +38,7 @@ class _EditPropertyScreenState extends State<EditPropertyScreen> {
   }
 
   Future<void> _selectDate(BuildContext context, bool isStartDate) async {
-    final DateTime? picked = await showDatePicker(
+    final picked = await showDatePicker(
       context: context,
       initialDate: isStartDate ? _startDate : _endDate,
       firstDate: DateTime(2000),
@@ -58,7 +59,6 @@ class _EditPropertyScreenState extends State<EditPropertyScreen> {
     if (_formKey.currentState!.validate()) {
       _formKey.currentState!.save();
       final updatedProperty = Property(
-        id: widget.property.id,
         name: _name,
         totalAmount: _totalAmount,
         paidAmount: _paidAmount,
@@ -68,7 +68,8 @@ class _EditPropertyScreenState extends State<EditPropertyScreen> {
         startDate: _startDate,
         endDate: _endDate,
       );
-      await DatabaseService.instance.updateProperty(updatedProperty);
+      final box = Hive.box<Property>('properties');
+      await box.put(widget.propertyKey, updatedProperty);
       Navigator.pop(context, updatedProperty);
     }
   }
@@ -93,21 +94,21 @@ class _EditPropertyScreenState extends State<EditPropertyScreen> {
               decoration: InputDecoration(labelText: 'Total Amount'),
               keyboardType: TextInputType.number,
               validator: (value) => value!.isEmpty ? 'Please enter a total amount' : null,
-              onSaved: (value) => _totalAmount = double.parse(value!),
+              onSaved: (value) => _totalAmount = double.tryParse(value!) ?? 0,
             ),
             TextFormField(
               initialValue: _paidAmount.toString(),
               decoration: InputDecoration(labelText: 'Paid Amount'),
               keyboardType: TextInputType.number,
               validator: (value) => value!.isEmpty ? 'Please enter a paid amount' : null,
-              onSaved: (value) => _paidAmount = double.parse(value!),
+              onSaved: (value) => _paidAmount = double.tryParse(value!) ?? 0,
             ),
             TextFormField(
               initialValue: _area.toString(),
               decoration: InputDecoration(labelText: 'Area (m²)'),
               keyboardType: TextInputType.number,
               validator: (value) => value!.isEmpty ? 'Please enter an area' : null,
-              onSaved: (value) => _area = double.parse(value!),
+              onSaved: (value) => _area = double.tryParse(value!) ?? 0,
             ),
             TextFormField(
               initialValue: _country,
